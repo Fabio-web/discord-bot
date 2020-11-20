@@ -108,18 +108,20 @@ function play(guild, music) {
 
     const musicPlayed = queue.get(guild.id)
 
-    const player = musicPlayed.connection.play(ytdl(music.url, {
-        filter: "audioonly",
-        quality: "highestaudio",
-        highWaterMark: 1 << 25
+    const player = musicPlayed.connection
 
-    })).on("finish",  () => {
+    if (music.url) {
+        player.play(ytdl(music.url, {
+            filter: "audioonly",
+            quality: "highestaudio",
+            highWaterMark: 1 << 25
+        })).setVolume(1)
+    }
+
+    player.on("finish",  () => {
         musicPlayed.musics.shift()
         play(guild, musicPlayed.musics[0])
-
     }).on("error", e => console.log(e))
-
-    player.setVolume(1)
 
     return musicPlayed.textChannel.send(new discord.MessageEmbed()
         .setTitle("Musique actuelle :cd: :point_down:")
