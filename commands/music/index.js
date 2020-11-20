@@ -3,40 +3,46 @@ const discord = require("discord.js")
 
 const queue = new Map()
 
-module.exports = async function (message) {
+module.exports = {
 
-    const args = message.argsRaw
-    const action = args[0]
-    args.shift()
-    const musicUrl = args.join(" ")
+    description: "Play the music that makes you happy",
+    usage: "play, pause, resume, stop, skip (slide), queue",
+    aliases: [],
+    async execute(message) {
 
-    const servQueue = queue.get(message.event.guild.id)
+        const args = message.argsRaw
+        const action = args[0]
+        args.shift()
+        const musicUrl = args.join(" ")
 
-    switch (action) {
-        case "play":
-        case "p":
-            await execute(message, servQueue, musicUrl)
-            break
-        case "skip":
-        case "slide":
-            await skip(message, servQueue, action)
-            break
-        case "stop":
-        case "s":
-            await stop(message, servQueue)
-            break
-        case "queue":
-        case "q":
-            await list(message, servQueue)
-            break
-        case "pause":
-            await pause(message, servQueue)
-            break
-        case "resume":
-            await resume(message, servQueue)
-            break
-        default:
-            message.event.channel.send(":x: Commande non valide")
+        const servQueue = queue.get(message.event.guild.id)
+
+        switch (action) {
+            case "play":
+            case "p":
+                await execute(message, servQueue, musicUrl)
+                break
+            case "skip":
+            case "slide":
+                await skip(message, servQueue, action)
+                break
+            case "stop":
+            case "s":
+                await stop(message, servQueue)
+                break
+            case "queue":
+            case "q":
+                await list(message, servQueue)
+                break
+            case "pause":
+                await pause(message, servQueue)
+                break
+            case "resume":
+                await resume(message, servQueue)
+                break
+            default:
+                message.event.channel.send(":x: Commande non valide")
+        }
     }
 
 }
@@ -142,7 +148,7 @@ function stop(message, servQueue) {
 
 function pause(message, servQueue) {
     if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new discord.MessageEmbed().setTitle(":cocktail: On fais une pause"))
+        message.event.channel.send(new discord.MessageEmbed().setTitle(":cocktail: On fait une pause"))
         queue.get(message.event.guild.id).connection.dispatcher.pause(true)
     }
 }
