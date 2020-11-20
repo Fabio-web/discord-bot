@@ -1,5 +1,4 @@
 const ytdl = require("ytdl-core")
-const discord = require("discord.js")
 
 const queue = new Map()
 
@@ -86,25 +85,25 @@ async function execute(message, servQueue, musicUrl) {
             queueConstruct.connection = await voiceChannel.join()
 
             console.log("play : " + queueConstruct.musics[0])
-            play(message.event.guild, queueConstruct.musics[0])
+            play(message, message.event.guild, queueConstruct.musics[0])
 
         } catch (e) {
             console.log(e)
-            return message.event.channel.send(new discord.MessageEmbed()
+            return message.event.channel.send(new message.Discord.MessageEmbed()
                 .setTitle(":x: Une erreur est survenue"))
         }
 
     } else { // Add queue
         servQueue.musics.push(music)
         console.log("add queue : " + servQueue.musics)
-        return message.event.channel.send(new discord.MessageEmbed()
+        return message.event.channel.send(new message.Discord.MessageEmbed()
             .setTitle("Musique ajoutée à la file d'attente :tickets:")
             .setDescription(music.title + " - " + music.author))
     }
 
 }
 
-function play(guild, music) {
+function play(message, guild, music) {
 
     const musicPlayed = queue.get(guild.id)
 
@@ -123,7 +122,7 @@ function play(guild, music) {
         play(guild, musicPlayed.musics[0])
     }).on("error", e => console.log(e))
 
-    return musicPlayed.textChannel.send(new discord.MessageEmbed()
+    return musicPlayed.textChannel.send(new message.Discord.MessageEmbed()
         .setTitle("Musique actuelle :cd: :point_down:")
         .setDescription(`${music.title} - ${music.author}`))
 
@@ -132,16 +131,18 @@ function play(guild, music) {
 function skip(message, servQueue, action) {
 
     if(servQueue.musics.length > 1) {
-        message.event.channel.send(new discord.MessageEmbed().setTitle(`On ${action}, c'est pas ouf :unamused:`))
+        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(`On ${action}, c'est pas ouf :unamused:`))
         servQueue.connection.dispatcher.end()
+    } else {
+        stop(message, servQueue)
     }
 
 }
 
 function stop(message, servQueue) {
 
-    if(servQueue.musics.length === 1) {
-        message.event.channel.send(new discord.MessageEmbed().setTitle(":octagonal_sign: On stop ici"))
+    if(servQueue.musics.length >= 1) {
+        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":octagonal_sign: On stop ici"))
         queue.get(message.event.guild.id).musics = []
         queue.get(message.event.guild.id).connection.dispatcher.end()
     }
@@ -150,14 +151,14 @@ function stop(message, servQueue) {
 
 function pause(message, servQueue) {
     if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new discord.MessageEmbed().setTitle(":cocktail: On fait une pause"))
+        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":cocktail: On fait une pause"))
         queue.get(message.event.guild.id).connection.dispatcher.pause(true)
     }
 }
 
 function resume(message, servQueue) {
     if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new discord.MessageEmbed().setTitle(":cd: Et c'est reparti !"))
+        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":cd: Et c'est reparti !"))
         queue.get(message.event.guild.id).connection.dispatcher.resume()
     }
 }
@@ -168,16 +169,12 @@ function list(message, servQueue) {
         const musicsList = servQueue.musics.map((music, index) => {
             return index === 0 ? `:headphones: *[playing]* **${music.title}** - *${music.author}*` : `**${music.title}** - *${music.author}*`
         })
-        message.event.channel.send(new discord.MessageEmbed()
+        message.event.channel.send(new message.Discord.MessageEmbed()
             .setTitle(":cd: Voici la file d'attente")
             .setDescription(musicsList.join("\n\n")))
     } catch (e) {
-        return message.event.channel.send(new discord.MessageEmbed()
+        return message.event.channel.send(new message.Discord.MessageEmbed()
             .setTitle(":x: Joue une musique pour faire cette commande"))
     }
-
-}
-
-function forward(message, servQueue) {
 
 }
