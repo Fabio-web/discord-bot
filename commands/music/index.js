@@ -1,6 +1,6 @@
-const ytdl = require("ytdl-core")
+const { execute, stop, skip, pause, resume, queue } = require("./controller")
 
-const queue = new Map()
+const playlist = new Map()
 
 module.exports = {
 
@@ -14,30 +14,30 @@ module.exports = {
         args.shift()
         const musicUrl = args.join(" ")
 
-        const servQueue = queue.get(message.event.guild.id)
+        const servQueue = playlist.get(message.event.guild.id)
 
         switch (action) {
             case "play":
             case "p":
-                await execute(message, servQueue, musicUrl)
+                await execute(playlist, message, servQueue, musicUrl)
                 break
             case "skip":
             case "slide":
-                await skip(message, servQueue, action)
+                await skip(playlist, message, servQueue, action)
                 break
             case "stop":
             case "s":
-                await stop(message, servQueue)
+                await stop(playlist, message, servQueue)
+                break
+            case "pause":
+                await pause(playlist, message, servQueue)
+                break
+            case "resume":
+                await resume(playlist, message, servQueue)
                 break
             case "queue":
             case "q":
-                await list(message, servQueue)
-                break
-            case "pause":
-                await pause(message, servQueue)
-                break
-            case "resume":
-                await resume(message, servQueue)
+                await queue(message, servQueue)
                 break
             default:
                 message.event.channel.send(":x: Commande non valide")
@@ -46,135 +46,5 @@ module.exports = {
 
 }
 
-async function execute(message, servQueue, musicUrl) {
 
-    const voiceChannel = message.event.member.voice.channel
 
-    if (!voiceChannel) {
-        return message.event.channel.send(":relieved: Un DJ a besoin d'un public")
-    }
-
-    const permissions = voiceChannel.permissionsFor(message.event.client.user)
-    if (!permissions.has("CONNECT") || !permissions.has("SPEAK")) {
-        return message.event.channel.send(":thinking: Il semble que je ne sois pas autorisé à entrer")
-    }
-
-    const musicInfo = await ytdl.getInfo(musicUrl)
-    const music = {
-        title: musicInfo.videoDetails.title,
-        url: musicInfo.videoDetails.video_url,
-        author: musicInfo.videoDetails.author.name
-    }
-
-    if (!servQueue) { // 0 music in queue, let's play
-
-        const queueConstruct = {
-            textChannel: message.event.channel,
-            voiceChannel: voiceChannel,
-            connection: null,
-            musics: [],
-            volume: 1,
-            playing: true,
-        }
-
-        queue.set(message.event.guild.id, queueConstruct);
-        queueConstruct.musics.push(music);
-
-        try {
-
-            queueConstruct.connection = await voiceChannel.join()
-
-            console.log("play : " + queueConstruct.musics[0])
-            play(message, message.event.guild, queueConstruct.musics[0])
-
-        } catch (e) {
-            console.log(e)
-            return message.event.channel.send(new message.Discord.MessageEmbed()
-                .setTitle(":x: Une erreur est survenue"))
-        }
-
-    } else { // Add queue
-        servQueue.musics.push(music)
-        console.log("add queue : " + servQueue.musics)
-        return message.event.channel.send(new message.Discord.MessageEmbed()
-            .setTitle("Musique ajoutée à la file d'attente :tickets:")
-            .setDescription(music.title + " - " + music.author))
-    }
-
-}
-
-function play(message, guild, music) {
-
-    const musicPlayed = queue.get(guild.id)
-
-    const player = musicPlayed.connection
-
-    if (music.url) {
-        player.play(ytdl(music.url, {
-            filter: "audioonly",
-            quality: "highestaudio",
-            highWaterMark: 1 << 25
-        })).setVolume(1)
-    }
-
-    player.on("finish",  () => {
-        musicPlayed.musics.shift()
-        play(guild, musicPlayed.musics[0])
-    }).on("error", e => console.log(e))
-
-    return musicPlayed.textChannel.send(new message.Discord.MessageEmbed()
-        .setTitle("Musique actuelle :cd: :point_down:")
-        .setDescription(`${music.title} - ${music.author}`))
-
-}
-
-function skip(message, servQueue, action) {
-
-    if(servQueue.musics.length > 1) {
-        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(`On ${action}, c'est pas ouf :unamused:`))
-        servQueue.connection.dispatcher.end()
-    } else {
-        stop(message, servQueue)
-    }
-
-}
-
-function stop(message, servQueue) {
-
-    if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":octagonal_sign: On stop ici"))
-        queue.get(message.event.guild.id).musics = []
-        queue.get(message.event.guild.id).connection.dispatcher.end()
-    }
-
-}
-
-function pause(message, servQueue) {
-    if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":cocktail: On fait une pause"))
-        queue.get(message.event.guild.id).connection.dispatcher.pause(true)
-    }
-}
-
-function resume(message, servQueue) {
-    if(servQueue.musics.length >= 1) {
-        message.event.channel.send(new message.Discord.MessageEmbed().setTitle(":cd: Et c'est reparti !"))
-        queue.get(message.event.guild.id).connection.dispatcher.resume()
-    }
-}
-
-function list(message, servQueue) {
-
-    try {
-        const musicsList = servQueue.musics.map((music, index) => {
-            return index === 0 ? `:headphones: *[playing]* **${music.title}** - *${music.author}*` : `**${music.title}** - *${music.author}*`
-        })
-        message.event.channel.send(new message.Discord.MessageEmbed()
-            .setTitle(":cd: Voici la file d'attente")
-            .setDescription(musicsList.join("\n\n")))
-    } catch (e) {
-        return message.event.channel.send(new message.Discord.MessageEmbed()
-            .setTitle(":x: Joue une musique pour faire cette commande"))
-    }
-
-}
