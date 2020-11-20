@@ -29,9 +29,11 @@ module.exports = async function (message) {
         case "q":
             await list(message, servQueue)
             break
-        case "forward":
-        case "fwd":
-            await forward(message, servQueue)
+        case "pause":
+            await pause(message, servQueue)
+            break
+        case "resume":
+            await resume(message, servQueue)
             break
         default:
             message.event.channel.send(":x: Commande non valide")
@@ -100,17 +102,17 @@ function play(guild, music) {
 
     const musicPlayed = queue.get(guild.id)
 
-    const player = musicPlayed.connection
-        .play(ytdl(music.url, {
-            filter: "audioonly",
-            quality: "highestaudio",
-            highWaterMark: 1 << 25
+    const player = musicPlayed.connection.play(ytdl(music.url, {
+        filter: "audioonly",
+        quality: "highestaudio",
+        highWaterMark: 1 << 25
 
-        })).on("finish",  () => {
-            musicPlayed.musics.shift()
-            play(guild, musicPlayed.musics[0])
+    })).on("finish",  () => {
+        musicPlayed.musics.shift()
+        play(guild, musicPlayed.musics[0])
 
-        }).on("error", e => console.log(e))
+    }).on("error", e => console.log(e))
+
     player.setVolume(1)
 
     return musicPlayed.textChannel.send(new discord.MessageEmbed()
@@ -136,6 +138,20 @@ function stop(message, servQueue) {
         queue.get(message.event.guild.id).connection.dispatcher.end()
     }
 
+}
+
+function pause(message, servQueue) {
+    if(servQueue.musics.length >= 1) {
+        message.event.channel.send(new discord.MessageEmbed().setTitle(":cocktail: On fais une pause"))
+        queue.get(message.event.guild.id).connection.dispatcher.pause(true)
+    }
+}
+
+function resume(message, servQueue) {
+    if(servQueue.musics.length >= 1) {
+        message.event.channel.send(new discord.MessageEmbed().setTitle(":cd: Et c'est reparti !"))
+        queue.get(message.event.guild.id).connection.dispatcher.resume()
+    }
 }
 
 function list(message, servQueue) {
